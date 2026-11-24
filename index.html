@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>圓形偵探AI大挑戰 (Visual Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0b1121;
+            color: #f8fafc;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .font-num {
+            font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+        }
+        /* 偵探網格背景 */
+        .bg-detective-grid {
+            background-image: 
+                linear-gradient(to right, rgba(56, 189, 248, 0.07) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(56, 189, 248, 0.07) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+        /* 發光特效 */
+        .glow-yellow {
+            filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.8));
+        }
+        .glow-mint {
+            filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.8));
+        }
+        .glow-pink {
+            filter: drop-shadow(0 0 8px rgba(244, 114, 182, 0.8));
+        }
+        /* SVG 互動線段懸停與點擊效果 */
+        .interactive-line {
+            cursor: pointer;
+            transition: stroke-width 0.2s, filter 0.2s;
+        }
+        .interactive-line:hover {
+            stroke-width: 9px;
+        }
+        /* 動畫 */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.9; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+        .animate-ring {
+            transform-origin: center;
+            animation: pulse-ring 1.5s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+        .animate-shake {
+            animation: shake 0.35s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-detective-grid min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- 頂部導航與關卡進度條 -->
+    <header class="w-full bg-slate-900/90 border-b border-sky-500/30 px-4 py-3 sticky top-0 z-30 backdrop-blur-md">
+        <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <!-- 標題 -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20 text-slate-900 font-black text-xl">
+                    🔍
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-emerald-300">
+                        圓形偵探AI大挑戰
+                    </h1>
+                    <p class="text-xs text-sky-300/80 hidden sm:block">香港小五數學 • 圖形與空間互動特訓</p>
+                </div>
+            </div>
+
+            <!-- 5關進度指示器 -->
+            <div class="flex items-center gap-1.5 sm:gap-2" id="level-indicators">
+                <button onclick="jumpToLevel(1)" id="ind-1" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-num font-bold text-sm sm:text-base flex items-center justify-center border-2 transition-all bg-amber-400 text-slate-900 border-amber-300 shadow-md shadow-amber-400/30">1</button>
+                <div class="w-3 sm:w-5 h-1 rounded bg-slate-700" id="line-1"></div>
+                <button onclick="jumpToLevel(2)" id="ind-2" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-num font-bold text-sm sm:text-base flex items-center justify-center border-2 transition-all bg-slate-800 text-slate-400 border-slate-700">2</button>
+                <div class="w-3 sm:w-5 h-1 rounded bg-slate-700" id="line-2"></div>
+                <button onclick="jumpToLevel(3)" id="ind-3" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-num font-bold text-sm sm:text-base flex items-center justify-center border-2 transition-all bg-slate-800 text-slate-400 border-slate-700">3</button>
+                <div class="w-3 sm:w-5 h-1 rounded bg-slate-700" id="line-3"></div>
+                <button onclick="jumpToLevel(4)" id="ind-4" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-num font-bold text-sm sm:text-base flex items-center justify-center border-2 transition-all bg-slate-800 text-slate-400 border-slate-700">4</button>
+                <div class="w-3 sm:w-5 h-1 rounded bg-slate-700" id="line-4"></div>
+                <button onclick="jumpToLevel(5)" id="ind-5" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-num font-bold text-sm sm:text-base flex items-center justify-center border-2 transition-all bg-slate-800 text-slate-400 border-slate-700">🎨</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主遊戲區 -->
+    <main class="flex-1 w-full max-w-5xl mx-auto px-4 py-4 sm:py-6 flex flex-col gap-4">
+
+        <!-- AI 偵探助手對話框 -->
+        <section id="ai-assistant-box" class="bg-slate-800/90 border-2 border-sky-400/40 rounded-2xl p-3.5 sm:p-4 shadow-xl flex items-start sm:items-center gap-3.5 relative overflow-hidden">
+            <div class="absolute top-0 right-0 px-2.5 py-0.5 bg-sky-500/20 text-sky-300 text-[10px] font-bold rounded-bl-xl tracking-wider">
+                AI 幾何偵探助手
+            </div>
+            <!-- AI 機器人頭像 SVG -->
+            <div class="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-2xl bg-gradient-to-b from-sky-400 to-blue-600 p-1 shadow-lg shadow-sky-500/30 animate-float flex items-center justify-center">
+                <svg viewBox="0 0 100 100" class="w-full h-full">
+                    <rect x="20" y="25" width="60" height="50" rx="14" fill="#0f172a"/>
+                    <!-- 天線 -->
+                    <line x1="50" y1="25" x2="50" y2="10" stroke="#fbbf24" stroke-width="5" stroke-linecap="round"/>
+                    <circle cx="50" cy="10" r="6" fill="#34d399"/>
+                    <!-- 眼睛 -->
+                    <circle cx="38" cy="48" r="7" fill="#38bdf8"/>
+                    <circle cx="62" cy="48" r="7" fill="#38bdf8"/>
+                    <circle cx="40" cy="46" r="2.5" fill="#ffffff"/>
+                    <circle cx="64" cy="46" r="2.5" fill="#ffffff"/>
+                    <!-- 偵探放大鏡框 -->
+                    <circle cx="62" cy="48" r="12" fill="none" stroke="#fbbf24" stroke-width="3"/>
+                    <!-- 微笑嘴巴 -->
+                    <path d="M 40 62 Q 50 70 60 62" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <!-- 訊息文字區 -->
+            <div class="flex-1 pr-2">
+                <div class="flex items-center gap-2 mb-1">
+                    <span id="stage-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400 text-slate-900">
+                        第 1 關：神眼辨識
+                    </span>
+                    <span id="sub-progress" class="text-xs font-bold text-emerald-300"></span>
+                </div>
+                <p id="ai-message" class="text-base sm:text-lg font-bold text-white leading-snug">
+                    歡迎加入圓形偵探社！請直接在下方的圓形圖中，點擊代表「弦」的線段！
+                </p>
+            </div>
+        </section>
+
+        <!-- 互動視覺畫布舞台 -->
+        <section id="game-stage" class="flex-1 bg-slate-900/80 border-2 border-slate-700/80 rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col items-center justify-center relative min-h-[380px] sm:min-h-[430px]">
+            <!-- 動態內容將由 JS 渲染於此 -->
+        </section>
+
+        <!-- 底部操作提示與下一關按鈕 -->
+        <section id="bottom-controls" class="flex flex-wrap items-center justify-between gap-3 bg-slate-800/60 border border-slate-700/60 rounded-2xl px-4 py-3">
+            <div id="hint-pill" class="flex items-center gap-2 text-sm text-sky-200">
+                <span class="text-lg">💡</span>
+                <span id="hint-text">提示：直接用手指或滑鼠點擊圖中的線條！</span>
+            </div>
+            <button id="next-btn" onclick="nextLevel()" class="hidden px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-black text-base sm:text-lg shadow-lg shadow-emerald-500/30 transition-transform active:scale-95 flex items-center gap-2 ml-auto">
+                <span>進入下一關</span>
+                <span>➔</span>
+            </button>
+        </section>
+
+    </main>
+
+    <script>
+        // ==================== 音效引擎 (Web Audio API 合成，無需外部檔案) ====================
+        const AudioSys = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playTone(freq, type, duration, vol = 0.15) {
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            },
+            playCorrect() {
+                this.playTone(523.25, 'sine', 0.15); // C5
+                setTimeout(() => this.playTone(659.25, 'sine', 0.15), 100); // E5
+                setTimeout(() => this.playTone(783.99, 'sine', 0.3), 200); // G5
+            },
+            playWrong() {
+                this.playTone(220, 'sawtooth', 0.2, 0.1);
+                setTimeout(() => this.playTone(185, 'sawtooth', 0.25, 0.1), 120);
+            },
+            playPop() {
+                this.playTone(600, 'sine', 0.08, 0.08);
+            }
+        };
+
+        // ==================== 全局遊戲狀態 ====================
+        let currentLevel = 1;
+        let maxUnlockedLevel = 1;
+
+        // 關卡1狀態：需連續找出3個目標（弦 -> 直徑 -> 半徑）
+        const l1Tasks = [
+            { target: 'chord', name: '弦', desc: '請在圖上直接點擊代表「弦」的線段！（提示：端點在圓周上的直線，且不一定要經過圓心）' },
+            { target: 'diameter', name: '直徑', desc: '好眼力！現在請點擊穿過圓心的「直徑」！' },
+            { target: 'radius', name: '半徑', desc: '太棒了！最後請點擊連接圓心與圓周的「半徑」！' }
+        ];
+        let l1Step = 0;
+
+        // 關卡2狀態：互動拖拉弦
+        let l2Completed = false;
+
+        // 關卡3狀態：寶箱數值推理（2題）
+        const l3Questions = [
+            {
+                givenType: 'radius',
+                givenVal: 6,
+                askType: 'diameter',
+                prompt: '寶箱鎖顯示：這條閃爍的「半徑」長 6 cm。請問整條「直徑」有多長？',
+                options: [
+                    { val: 3, label: '3 cm', sub: '6 的一半' },
+                    { val: 12, label: '12 cm', sub: '半徑的 2 倍' },
+                    { val: 6, label: '6 cm', sub: '和半徑一樣' }
+                ],
+                correct: 12
+            },
+            {
+                givenType: 'diameter',
+                givenVal: 14,
+                askType: 'radius',
+                prompt: '第二道鎖顯示：這條穿過圓心的「直徑」長 14 cm。請問「半徑」有多長？',
+                options: [
+                    { val: 7, label: '7 cm', sub: '直徑的一半' },
+                    { val: 28, label: '28 cm', sub: '14 的 2 倍' },
+                    { val: 10, label: '10 cm', sub: '14 減 4' }
+                ],
+                correct: 7
+            }
+        ];
+        let l3Step = 0;
+
+        // 關卡4狀態：抓錯處（2題）
+        const l4Cases = [
+            {
+                title: '案件 A：小明的報告說這條粉紅線是「直徑」',
+                prompt: '這張圖裡有哪裡畫錯了？請直接點擊圖上「不合理的地方」！',
+                type: 'fake-diameter',
+                wrongFeedback: '再仔細看看粉紅線和中間的「圓心」喔！',
+                rightFeedback: '破案成功！這條粉紅線「沒有穿過圓心」，所以它只是一條普通的「弦」，不是直徑！'
+            },
+            {
+                title: '案件 B：小華畫了兩條線，說它們都是「弦」',
+                prompt: '圖中有兩條線（綠線和橙線），其中一條「不是弦」！請點擊畫錯的那一條！',
+                type: 'fake-chord',
+                wrongFeedback: '綠線的兩個端點都穩穩地碰在圓周上，它是標準的弦喔！試試看另一條？',
+                rightFeedback: '神眼偵探！橙線的右端點「沒有碰到圓周」，懸在圓形裡面，所以它不是弦！'
+            }
+        ];
+        let l4Step = 0;
+
+        // ==================== UI 更新輔助函數 ====================
+        function setAIMessage(text, mood = 'normal') {
+            const box = document.getElementById('ai-assistant-box');
+            const msgEl = document.getElementById('ai-message');
+            msgEl.innerHTML = text;
+            
+            box.classList.remove('border-sky-400/40', 'border-emerald-400', 'border-rose-400', 'animate-shake');
+            void box.offsetWidth; // 觸發重繪
+
+            if (mood === 'success') {
+                box.classList.add('border-emerald-400');
+            } else if (mood === 'error') {
+                box.classList.add('border-rose-400', 'animate-shake');
+            } else {
+                box.classList.add('border-sky-400/40');
+            }
+        }
+
+        function updateProgressUI() {
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.getElementById(`ind-${i}`);
+                const line = document.getElementById(`line-${i}`);
+                btn.className = 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl font-num font-bold text-sm sm:text-base flex items-center justify-center border-2 transition-all ';
+                
+                if (i === currentLevel) {
+                    btn.className += 'bg-amber-400 text-slate-900 border-amber-200 scale-110 shadow-lg shadow-amber-400/40';
+                } else if (i < maxUnlockedLevel) {
+                    btn.className += 'bg-emerald-500 text-slate-950 border-emerald-300 cursor-pointer';
+                } else if (i === maxUnlockedLevel) {
+                    btn.className += 'bg-sky-500 text-white border-sky-300 cursor-pointer';
+                } else {
+                    btn.className += 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed';
+                }
+
+                if (line) {
+                    line.className = `w-3 sm:w-5 h-1 rounded transition-colors ${i < maxUnlockedLevel ? 'bg-emerald-400' : 'bg-slate-700'}`;
+                }
+            }
+        }
+
+        function jumpToLevel(lvl) {
+            if (lvl <= maxUnlockedLevel) {
+                AudioSys.playPop();
+                loadLevel(lvl);
+            }
+        }
+
+        function showNextButton(label = '進入下一關') {
+            const btn = document.getElementById('next-btn');
+            btn.querySelector('span').textContent = label;
+            btn.classList.remove('hidden');
+        }
+
+        function hideNextButton() {
+            document.getElementById('next-btn').classList.add('hidden');
+        }
+
+        function nextLevel() {
+            AudioSys.playPop();
+            if (currentLevel < 5) {
+                loadLevel(currentLevel + 1);
+            }
+        }
+
+        function completeCurrentLevel() {
+            if (currentLevel >= maxUnlockedLevel && currentLevel < 5) {
+                maxUnlockedLevel = currentLevel + 1;
+            }
+            updateProgressUI();
+            if (currentLevel < 5) {
+                showNextButton(currentLevel === 4 ? '解鎖 AI 藝術工坊 🎨' : '進入下一關');
+            }
+        }
+
+        // ==================== 關卡載入控制器 ====================
+        function loadLevel(lvl) {
+            currentLevel = lvl;
+            updateProgressUI();
+            hideNextButton();
+
+            if (lvl === 1) renderLevel1();
+            else if (lvl === 2) renderLevel2();
+            else if (lvl === 3) renderLevel3();
+            else if (lvl === 4) renderLevel4();
+            else if (lvl === 5) renderLevel5();
+        }
+
+        // ==================== 第 1 關：神眼辨識（看圖點選） ====================
+        function renderLevel1() {
+            l1Step = 0;
+            document.getElementById('stage-badge').textContent = '第 1 關：神眼辨識';
+            document.getElementById('sub-progress').textContent = '任務 1 / 3';
+            document.getElementById('hint-text').textContent = '提示：直接點擊畫布上的彩色線條！';
+            setAIMessage(l1Tasks[0].desc);
+
+            const stage = document.getElementById('game-stage');
+            // 圓心在 (200, 175), 半徑 R = 135
+            stage.innerHTML = `
+                <div class="w-full max-w-md flex flex-col items-center">
+                    <svg id="l1-svg" viewBox="0 0 400 350" class="w-full h-auto max-h-[340px] overflow-visible">
+                        <!-- 外圓周 -->
+                        <circle cx="200" cy="175" r="135" fill="rgba(15, 23, 42, 0.6)" stroke="#38bdf8" stroke-width="5" />
+                        
+                        <!-- 1. 直徑 (藍色，穿過圓心 200,175) -->
+                        <g onclick="handleL1Click('diameter')" class="interactive-line" id="g-diameter">
+                            <line x1="78" y1="118" x2="322" y2="232" stroke="transparent" stroke-width="24" />
+                            <line id="line-diameter" x1="78" y1="118" x2="322" y2="232" stroke="#38bdf8" stroke-width="6" stroke-linecap="round" />
+                            <circle cx="78" cy="118" r="5" fill="#38bdf8"/>
+                            <circle cx="322" cy="232" r="5" fill="#38bdf8"/>
+                        </g>
+
+                        <!-- 2. 半徑 (薄荷綠，從圓心 200,175 到右上圓周) -->
+                        <g onclick="handleL1Click('radius')" class="interactive-line" id="g-radius">
+                            <line x1="200" y1="175" x2="295" y2="80" stroke="transparent" stroke-width="24" />
+                            <line id="line-radius" x1="200" y1="175" x2="295" y2="80" stroke="#34d399" stroke-width="6" stroke-linecap="round" />
+                            <circle cx="295" cy="80" r="5" fill="#34d399"/>
+                        </g>
+
+                        <!-- 3. 弦 (亮黃色，上方兩點之間，不經圓心) -->
+                        <g onclick="handleL1Click('chord')" class="interactive-line" id="g-chord">
+                            <line x1="115" y1="70" x2="245" y2="48" stroke="transparent" stroke-width="24" />
+                            <line id="line-chord" x1="115" y1="70" x2="245" y2="48" stroke="#facc15" stroke-width="6" stroke-linecap="round" />
+                            <circle cx="115" cy="70" r="5" fill="#facc15"/>
+                            <circle cx="245" cy="48" r="5" fill="#facc15"/>
+                        </g>
+
+                        <!-- 4. 非例子A：端點沒碰到圓周 (粉紅色) -->
+                        <g onclick="handleL1Click('non-touch')" class="interactive-line" id="g-non-touch">
+                            <line x1="110" y1="220" x2="230" y2="255" stroke="transparent" stroke-width="24" />
+                            <line x1="110" y1="220" x2="230" y2="255" stroke="#f472b6" stroke-width="6" stroke-linecap="round" />
+                            <circle id="err-dot-1" cx="110" cy="220" r="5" fill="#f472b6"/>
+                            <circle id="err-dot-2" cx="230" cy="255" r="5" fill="#f472b6"/>
+                        </g>
+
+                        <!-- 5. 非例子B：彎曲的線 (紫色弧線) -->
+                        <g onclick="handleL1Click('curved')" class="interactive-line" id="g-curved">
+                            <path d="M 145 295 Q 200 245 275 285" fill="none" stroke="transparent" stroke-width="24" />
+                            <path d="M 145 295 Q 200 245 275 285" fill="none" stroke="#c084fc" stroke-width="6" stroke-linecap="round" />
+                        </g>
+
+                        <!-- 圓心標記 (置於頂層) -->
+                        <circle cx="200" cy="175" r="7" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+                        <text x="200" y="200" text-anchor="middle" fill="#cbd5e1" font-size="14" font-weight="bold">圓心</text>
+
+                        <!-- 動態標籤群組 -->
+                        <g id="l1-labels"></g>
+                    </svg>
+                </div>
+            `;
+        }
+
+        function handleL1Click(clickedType) {
+            if (l1Step >= l1Tasks.length) return;
+            const currentTask = l1Tasks[l1Step];
+            const labelsGroup = document.getElementById('l1-labels');
+
+            if (clickedType === currentTask.target) {
+                AudioSys.playCorrect();
+                // 顯示正確發光與標籤
+                if (clickedType === 'chord') {
+                    document.getElementById('line-chord').classList.add('glow-yellow');
+                    labelsGroup.innerHTML += `<rect x="145" y="22" width="60" height="26" rx="8" fill="#facc15"/><text x="175" y="40" text-anchor="middle" fill="#0f172a" font-weight="900" font-size="14">弦 ✓</text>`;
+                } else if (clickedType === 'diameter') {
+                    document.getElementById('line-diameter').classList.add('glow-mint');
+                    labelsGroup.innerHTML += `<rect x="245" y="165" width="70" height="26" rx="8" fill="#38bdf8"/><text x="280" y="183" text-anchor="middle" fill="#0f172a" font-weight="900" font-size="14">直徑 ✓</text>`;
+                } else if (clickedType === 'radius') {
+                    document.getElementById('line-radius').classList.add('glow-mint');
+                    labelsGroup.innerHTML += `<rect x="235" y="105" width="70" height="26" rx="8" fill="#34d399"/><text x="270" y="123" text-anchor="middle" fill="#0f172a" font-weight="900" font-size="14">半徑 ✓</text>`;
+                }
+
+                l1Step++;
+                if (l1Step < l1Tasks.length) {
+                    document.getElementById('sub-progress').textContent = `任務 ${l1Step + 1} / 3`;
+                    setAIMessage(l1Tasks[l1Step].desc, 'success');
+                } else {
+                    document.getElementById('sub-progress').textContent = '全部完成！';
+                    setAIMessage('太厲害了！你已經精準分辨出「弦、直徑、半徑」了！準備好進入第2關實驗嗎？', 'success');
+                    completeCurrentLevel();
+                }
+            } else {
+                AudioSys.playWrong();
+                // 針對不同點錯原因給予視覺提示
+                if (clickedType === 'non-touch') {
+                    const d1 = document.getElementById('err-dot-1');
+                    const d2 = document.getElementById('err-dot-2');
+                    d1.setAttribute('r', '10'); d1.setAttribute('fill', '#fb7185');
+                    d2.setAttribute('r', '10'); d2.setAttribute('fill', '#fb7185');
+                    setTimeout(() => { d1.setAttribute('r', '5'); d2.setAttribute('r', '5'); }, 800);
+                    setAIMessage('⚠️ 哎呀！這條粉紅線的兩端<span class="text-rose-300 underline">沒有碰到圓周</span>，它連「弦」都不是喔！再試一次！', 'error');
+                } else if (clickedType === 'curved') {
+                    setAIMessage('⚠️ 紫色這條是<span class="text-purple-300 underline">彎曲的線</span>！圓形的弦、直徑和半徑都必須是「直線」喔！', 'error');
+                } else if (clickedType === 'radius' && currentTask.target === 'chord') {
+                    setAIMessage('⚠️ 綠色線從「圓心」出發，這是「半徑」喔！我們現在要找兩端都在圓周上的「弦」！', 'error');
+                } else if (clickedType === 'diameter' && currentTask.target === 'chord') {
+                    setAIMessage('⚠️ 藍色線雖然也是弦，但它穿過了圓心，我們叫它「直徑」。先點點看上面黃色那條不經圓心的弦吧！', 'error');
+                } else if (clickedType === 'chord' && currentTask.target === 'diameter') {
+                    setAIMessage('⚠️ 黃色這條沒有穿過「圓心」喔！請找一條穿過中間白色圓心的直線！', 'error');
+                } else {
+                    setAIMessage(`⚠️ 這不是「${currentTask.name}」喔！再觀察一下它和圓心、圓周的關係！`, 'error');
+                }
+            }
+        }
+
+        // ==================== 第 2 關：尋找最長的弦（互動拖拉實驗） ====================
+        function renderLevel2() {
+            l2Completed = false;
+            document.getElementById('stage-badge').textContent = '第 2 關：尋找最長的弦';
+            document.getElementById('sub-progress').textContent = '拖拉幾何實驗';
+            document.getElementById('hint-text').textContent = '提示：按住黃色控制把手上下拖動，觀察尺規長度變化！';
+            setAIMessage('請上下拖動圓形內的水平「弦」，找出圓形內<span class="text-amber-300 underline">最長的弦</span>並停在正確位置！');
+
+            const stage = document.getElementById('game-stage');
+            // 圓心 (200, 175), 半徑 R = 130 (代表 5 cm，直徑 = 10.0 cm)
+            stage.innerHTML = `
+                <div class="w-full max-w-lg flex flex-col items-center gap-3">
+                    <!-- 即時長度數位儀表板 -->
+                    <div class="flex items-center gap-4 bg-slate-950/90 border border-sky-500/40 px-5 py-2.5 rounded-2xl shadow-inner">
+                        <span class="text-slate-300 text-sm sm:text-base font-bold">目前弦的長度：</span>
+                        <span id="l2-length-display" class="font-num text-2xl sm:text-3xl font-black text-sky-400">6.0 cm</span>
+                        <span id="l2-status-tag" class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-400">繼續移動試試</span>
+                    </div>
+
+                    <svg id="l2-svg" viewBox="0 0 400 350" class="w-full h-auto max-h-[320px] touch-none select-none overflow-visible">
+                        <!-- 參考輔助平行虛線 -->
+                        <line x1="96" y1="97" x2="304" y2="97" stroke="#334155" stroke-width="2" stroke-dasharray="6 6" />
+                        <line x1="70" y1="175" x2="330" y2="175" stroke="#334155" stroke-width="2" stroke-dasharray="6 6" />
+                        <line x1="96" y1="253" x2="304" y2="253" stroke="#334155" stroke-width="2" stroke-dasharray="6 6" />
+
+                        <!-- 主圓周 -->
+                        <circle cx="200" cy="175" r="130" fill="rgba(15, 23, 42, 0.5)" stroke="#38bdf8" stroke-width="5" />
+
+                        <!-- 圓心 -->
+                        <circle id="l2-center-ring" cx="200" cy="175" r="14" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0" />
+                        <circle cx="200" cy="175" r="6" fill="#ffffff" />
+                        <text x="200" y="198" text-anchor="middle" fill="#94a3b8" font-size="13" font-weight="bold">圓心</text>
+
+                        <!-- 可拖動的弦 (初始 y = 71, 距離圓心 dy = -104, 半弦長 = sqrt(130^2 - 104^2) = 78 -> 長度 6.0cm) -->
+                        <g id="l2-draggable-chord" style="cursor: ns-resize;">
+                            <!-- 透明加粗觸控區 -->
+                            <line id="l2-hit-line" x1="122" y1="71" x2="278" y2="71" stroke="transparent" stroke-width="36" />
+                            <!-- 實際顯示線段 -->
+                            <line id="l2-vis-line" x1="122" y1="71" x2="278" y2="71" stroke="#38bdf8" stroke-width="7" stroke-linecap="round" />
+                            <!-- 兩端點 -->
+                            <circle id="l2-dot-left" cx="122" cy="71" r="6" fill="#38bdf8" />
+                            <circle id="l2-dot-right" cx="278" cy="71" r="6" fill="#38bdf8" />
+                            <!-- 中央拖拉把手圖示 -->
+                            <g id="l2-handle" transform="translate(200, 71)">
+                                <rect x="-24" y="-14" width="48" height="28" rx="14" fill="#fbbf24" stroke="#0f172a" stroke-width="2.5" />
+                                <text x="0" y="5" text-anchor="middle" fill="#0f172a" font-size="14" font-weight="900">⇅</text>
+                            </g>
+                        </g>
+                    </svg>
+                </div>
+            `;
+
+            initL2Drag();
+        }
+
+        function initL2Drag() {
+            const svg = document.getElementById('l2-svg');
+            const chordGroup = document.getElementById('l2-draggable-chord');
+            let isDragging = false;
+            const cy = 175;
+            const R = 130;
+
+            function updateChordPosition(clientY) {
+                const rect = svg.getBoundingClientRect();
+                const scaleY = 350 / rect.height;
+                let svgY = (clientY - rect.top) * scaleY;
+
+                // 限制在圓內 (-122 到 +122 之間)
+                const minY = cy - 120;
+                const maxY = cy + 120;
+                svgY = Math.max(minY, Math.min(maxY, svgY));
+
+                // 磁吸效果：接近圓心 175 時自動吸附
+                const distToCenter = Math.abs(svgY - cy);
+                let isDiameter = false;
+                if (distToCenter < 7) {
+                    svgY = cy;
+                    isDiameter = true;
+                }
+
+                const dy = svgY - cy;
+                const halfWidth = Math.sqrt(R * R - dy * dy);
+                const x1 = 200 - halfWidth;
+                const x2 = 200 + halfWidth;
+
+                // 計算模擬厘米 (直徑 260px = 10.0 cm)
+                const cmLength = ((halfWidth * 2) / (R * 2) * 10).toFixed(1);
+
+                // 更新 SVG 元素
+                ['l2-hit-line', 'l2-vis-line'].forEach(id => {
+                    const el = document.getElementById(id);
+                    el.setAttribute('x1', x1);
+                    el.setAttribute('x2', x2);
+                    el.setAttribute('y1', svgY);
+                    el.setAttribute('y2', svgY);
+                });
+                document.getElementById('l2-dot-left').setAttribute('cx', x1);
+                document.getElementById('l2-dot-left').setAttribute('cy', svgY);
+                document.getElementById('l2-dot-right').setAttribute('cx', x2);
+                document.getElementById('l2-dot-right').setAttribute('cy', svgY);
+                document.getElementById('l2-handle').setAttribute('transform', `translate(200, ${svgY})`);
+
+                const lenDisplay = document.getElementById('l2-length-display');
+                const statusTag = document.getElementById('l2-status-tag');
+                const visLine = document.getElementById('l2-vis-line');
+
+                lenDisplay.textContent = `${cmLength} cm`;
+
+                if (isDiameter) {
+                    visLine.setAttribute('stroke', '#facc15');
+                    visLine.classList.add('glow-yellow');
+                    lenDisplay.className = 'font-num text-2xl sm:text-3xl font-black text-amber-400';
+                    statusTag.className = 'px-2.5 py-0.5 rounded-lg text-xs font-black bg-amber-400 text-slate-950';
+                    statusTag.textContent = '★ 最長的弦 = 直徑！';
+                    document.getElementById('l2-center-ring').setAttribute('opacity', '1');
+                    document.getElementById('l2-center-ring').classList.add('animate-ring');
+
+                    if (!l2Completed) {
+                        l2Completed = true;
+                        AudioSys.playCorrect();
+                        setAIMessage('破案發現！當弦穿過「圓心」時變成<span class="text-amber-300 font-black">直徑 (10.0 cm)</span>！愈接近直徑的弦愈長，所以<span class="text-emerald-300 underline">直徑是圓形內最長的弦</span>！', 'success');
+                        completeCurrentLevel();
+                    }
+                } else {
+                    visLine.setAttribute('stroke', '#38bdf8');
+                    visLine.classList.remove('glow-yellow');
+                    lenDisplay.className = 'font-num text-2xl sm:text-3xl font-black text-sky-400';
+                    statusTag.className = 'px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-800 text-sky-300';
+                    statusTag.textContent = distToCenter < 45 ? '很接近了！再往圓心一點' : '距離圓心較遠，弦較短';
+                    document.getElementById('l2-center-ring').setAttribute('opacity', '0');
+                    document.getElementById('l2-center-ring').classList.remove('animate-ring');
+                }
+            }
+
+            chordGroup.addEventListener('mousedown', (e) => { isDragging = true; e.preventDefault(); });
+            window.addEventListener('mousemove', (e) => { if (isDragging && currentLevel === 2) updateChordPosition(e.clientY); });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+
+            chordGroup.addEventListener('touchstart', (e) => { isDragging = true; e.preventDefault(); }, { passive: false });
+            window.addEventListener('touchmove', (e) => {
+                if (isDragging && currentLevel === 2 && e.touches.length > 0) {
+                    updateChordPosition(e.touches[0].clientY);
+                }
+            }, { passive: false });
+            window.addEventListener('touchend', () => { isDragging = false; });
+        }
+
+        // ==================== 第 3 關：半徑與直徑配對鎖（視覺化數值推理） ====================
+        function renderLevel3() {
+            l3Step = 0;
+            renderL3Question();
+        }
+
+        function renderL3Question() {
+            const q = l3Questions[l3Step];
+            document.getElementById('stage-badge').textContent = '第 3 關：半徑與直徑配對鎖';
+            document.getElementById('sub-progress').textContent = `密碼鎖 ${l3Step + 1} / 2`;
+            document.getElementById('hint-text').textContent = '提示：觀察圖中線段與圓心的關係，點選正確的密碼鎖按鈕！';
+            setAIMessage(q.prompt);
+
+            const stage = document.getElementById('game-stage');
+            const isGivenRadius = q.givenType === 'radius';
+
+            stage.innerHTML = `
+                <div class="w-full max-w-2xl flex flex-col md:flex-row items-center justify-around gap-6">
+                    <!-- 左側：寶箱圓形密碼鎖 SVG -->
+                    <div class="relative flex flex-col items-center">
+                        <svg id="l3-lock-svg" viewBox="0 0 280 280" class="w-60 h-60 sm:w-64 sm:h-64 overflow-visible">
+                            <!-- 鎖扣頂部 -->
+                            <path id="l3-shackle" d="M 95 75 L 95 45 A 45 45 0 0 1 185 45 L 185 75" fill="none" stroke="#94a3b8" stroke-width="14" stroke-linecap="round" class="transition-transform duration-500" />
+                            <!-- 圓形鎖身 -->
+                            <circle cx="140" cy="155" r="105" fill="#1e293b" stroke="#fbbf24" stroke-width="8" />
+                            <circle cx="140" cy="155" r="88" fill="#0f172a" stroke="#38bdf8" stroke-width="3" stroke-dasharray="8 6" />
+
+                            ${isGivenRadius ? `
+                                <!-- 題目1：已知半徑 = 6cm，求直徑 -->
+                                <!-- 完整直徑虛線（待解鎖） -->
+                                <line x1="52" y1="155" x2="228" y2="155" stroke="#64748b" stroke-width="5" stroke-dasharray="6 6" />
+                                <!-- 已知半徑高亮實線 -->
+                                <line x1="140" y1="155" x2="228" y2="155" stroke="#34d399" stroke-width="7" stroke-linecap="round" class="glow-mint" />
+                                <rect x="152" y="122" width="66" height="24" rx="6" fill="#34d399" />
+                                <text x="185" y="139" text-anchor="middle" fill="#0f172a" font-weight="900" font-size="13">半徑 ${q.givenVal}cm</text>
+                                <text x="140" y="195" text-anchor="middle" fill="#fbbf24" font-weight="900" font-size="15">整條直徑 = ? cm</text>
+                            ` : `
+                                <!-- 題目2：已知直徑 = 14cm，求半徑 -->
+                                <!-- 已知直徑高亮實線 -->
+                                <line x1="52" y1="155" x2="228" y2="155" stroke="#38bdf8" stroke-width="7" stroke-linecap="round" />
+                                <rect x="92" y="120" width="96" height="24" rx="6" fill="#38bdf8" />
+                                <text x="140" y="137" text-anchor="middle" fill="#0f172a" font-weight="900" font-size="13">整條直徑 ${q.givenVal}cm</text>
+                                <!-- 半徑高亮提示線 -->
+                                <line x1="140" y1="155" x2="228" y2="155" stroke="#fbbf24" stroke-width="7" stroke-linecap="round" class="glow-yellow" />
+                                <text x="185" y="185" text-anchor="middle" fill="#fbbf24" font-weight="900" font-size="14">半徑 = ? cm</text>
+                            `}
+
+                            <!-- 圓心 -->
+                            <circle cx="140" cy="155" r="7" fill="#ffffff" stroke="#0f172a" stroke-width="2" />
+                        </svg>
+                    </div>
+
+                    <!-- 右側：3個視覺化選項按鈕 -->
+                    <div class="flex flex-col gap-3 w-full max-w-xs">
+                        <div class="text-sm font-bold text-sky-300 text-center md:text-left mb-1">點擊正確數值解開密碼鎖：</div>
+                        ${q.options.map(opt => `
+                            <button onclick="handleL3Answer(${opt.val}, this)" class="group w-full p-4 rounded-2xl bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 hover:border-amber-400 transition-all flex items-center justify-between shadow-md active:scale-95">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-10 h-10 rounded-xl bg-slate-900 text-amber-400 font-num font-black text-lg flex items-center justify-center border border-slate-700 group-hover:border-amber-400">🔑</span>
+                                    <span class="font-num text-2xl font-black text-white">${opt.label}</span>
+                                </div>
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-900/80 text-slate-300">${opt.sub}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleL3Answer(selectedVal, btnEl) {
+            const q = l3Questions[l3Step];
+            if (selectedVal === q.correct) {
+                AudioSys.playCorrect();
+                btnEl.classList.remove('border-slate-600', 'bg-slate-800');
+                btnEl.classList.add('border-emerald-400', 'bg-emerald-950/60');
+                
+                // 鎖扣向上彈開動畫
+                const shackle = document.getElementById('l3-shackle');
+                if (shackle) {
+                    shackle.style.transform = 'translateY(-18px)';
+                    shackle.setAttribute('stroke', '#34d399');
+                }
+
+                setTimeout(() => {
+                    l3Step++;
+                    if (l3Step < l3Questions.length) {
+                        setAIMessage('喀嚓！第一道鎖打開了！Remember：<span class="text-emerald-300">直徑是半徑的 2 倍</span>，接著挑戰第二道鎖！', 'success');
+                        renderL3Question();
+                    } else {
+                        document.getElementById('sub-progress').textContent = '密碼鎖全部開啟！';
+                        setAIMessage('太神啦！你完全掌握了「<span class="text-amber-300">半徑是直徑的一半，直徑是半徑的兩倍</span>」！準備好迎接第4關偵探陷阱題了嗎？', 'success');
+                        completeCurrentLevel();
+                    }
+                }, 950);
+            } else {
+                AudioSys.playWrong();
+                btnEl.classList.add('border-rose-500', 'animate-shake');
+                setTimeout(() => btnEl.classList.remove('border-rose-500', 'animate-shake'), 600);
+                
+                if (q.givenType === 'radius') {
+                    setAIMessage('⚠️ 密碼錯誤！看看圖中：半徑只佔圓的一半，整條直徑是由「兩條半徑」接起來的喔！6 + 6 是多少？', 'error');
+                } else {
+                    setAIMessage('⚠️ 密碼錯誤！整條直徑長 14 cm，半徑只有圓心到圓周的一半喔！14 的一半是多少？', 'error');
+                }
+            }
+        }
+
+        // ==================== 第 4 關：幾何大偵探陷阱題（看圖抓錯處） ====================
+        function renderLevel4() {
+            l4Step = 0;
+            renderL4Case();
+        }
+
+        function renderL4Case() {
+            const c = l4Cases[l4Step];
+            document.getElementById('stage-badge').textContent = '第 4 關：偵探抓錯處';
+            document.getElementById('sub-progress').textContent = `案件 ${l4Step + 1} / 2`;
+            document.getElementById('hint-text').textContent = '提示：直接點擊圖形上畫錯或有問題的位置！';
+            setAIMessage(`【${c.title}】<br>${c.prompt}`);
+
+            const stage = document.getElementById('game-stage');
+
+            if (c.type === 'fake-diameter') {
+                // 案件 A：一條差一點才過圓心的弦被標為直徑
+                stage.innerHTML = `
+                    <div class="w-full max-w-md flex flex-col items-center">
+                        <div class="bg-amber-400/10 border border-amber-400/40 text-amber-200 px-4 py-1.5 rounded-full text-sm font-bold mb-2">
+                            嫌疑圖卡 A：宣稱粉紅線是「直徑」
+                        </div>
+                        <svg viewBox="0 0 400 330" class="w-full h-auto max-h-[310px] overflow-visible">
+                            <circle cx="200" cy="165" r="130" fill="rgba(15, 23, 42, 0.6)" stroke="#38bdf8" stroke-width="5" />
+                            
+                            <!-- 錯處點擊區域：沒有經過圓心的粉紅線與圓心之間的空隙 -->
+                            <g onclick="handleL4Click(true)" class="interactive-line">
+                                <line x1="85" y1="105" x2="315" y2="105" stroke="transparent" stroke-width="32" />
+                                <line id="l4-target-line" x1="85" y1="105" x2="315" y2="105" stroke="#f472b6" stroke-width="7" stroke-linecap="round" />
+                                <rect x="135" y="65" width="130" height="28" rx="8" fill="#f472b6" />
+                                <text x="200" y="84" text-anchor="middle" fill="#0f172a" font-weight="900" font-size="14">這是「直徑」？</text>
+                            </g>
+
+                            <!-- 圓心 (點擊圓心也算抓到關鍵) -->
+                            <g onclick="handleL4Click(true)" class="cursor-pointer">
+                                <circle cx="200" cy="165" r="24" fill="transparent" />
+                                <circle cx="200" cy="165" r="8" fill="#ffffff" stroke="#fbbf24" stroke-width="3" />
+                                <text x="200" y="192" text-anchor="middle" fill="#fbbf24" font-weight="900" font-size="15">圓心在這裡！</text>
+                            </g>
+
+                            <!-- 干擾區域：點擊圓周 -->
+                            <circle cx="200" cy="165" r="130" fill="none" stroke="transparent" stroke-width="20" onclick="handleL4Click(false)" class="cursor-pointer" />
+
+                            <g id="l4-feedback-mark"></g>
+                        </svg>
+                    </div>
+                `;
+            } else {
+                // 案件 B：一條標準弦（綠）vs 一條端點未碰圓周的線（橙）
+                stage.innerHTML = `
+                    <div class="w-full max-w-md flex flex-col items-center">
+                        <div class="bg-amber-400/10 border border-amber-400/40 text-amber-200 px-4 py-1.5 rounded-full text-sm font-bold mb-2">
+                            嫌疑圖卡 B：哪一條「不是弦」？
+                        </div>
+                        <svg viewBox="0 0 400 330" class="w-full h-auto max-h-[310px] overflow-visible">
+                            <circle cx="200" cy="165" r="130" fill="rgba(15, 23, 42, 0.6)" stroke="#38bdf8" stroke-width="5" />
+                            <circle cx="200" cy="165" r="6" fill="#ffffff" />
+                            <text x="200" y="188" text-anchor="middle" fill="#94a3b8" font-size="13" font-weight="bold">圓心</text>
+
+                            <!-- 正確的弦（綠色，干擾選項） -->
+                            <g onclick="handleL4Click(false)" class="interactive-line">
+                                <line x1="95" y1="88" x2="305" y2="88" stroke="transparent" stroke-width="28" />
+                                <line x1="95" y1="88" x2="305" y2="88" stroke="#34d399" stroke-width="7" stroke-linecap="round" />
+                                <circle cx="95" cy="88" r="6" fill="#34d399" />
+                                <circle cx="305" cy="88" r="6" fill="#34d399" />
+                                <text x="200" y="72" text-anchor="middle" fill="#34d399" font-weight="bold" font-size="14">綠線</text>
+                            </g>
+
+                            <!-- 錯誤的弦（橙色，右端點懸空） -->
+                            <g onclick="handleL4Click(true)" class="interactive-line">
+                                <line x1="95" y1="242" x2="255" y2="242" stroke="transparent" stroke-width="32" />
+                                <line id="l4-target-line" x1="95" y1="242" x2="255" y2="242" stroke="#fb923c" stroke-width="7" stroke-linecap="round" />
+                                <circle cx="95" cy="242" r="6" fill="#fb923c" />
+                                <circle id="l4-bad-dot" cx="255" cy="242" r="7" fill="#fb923c" stroke="#ffffff" stroke-width="2" />
+                                <text x="175" y="272" text-anchor="middle" fill="#fb923c" font-weight="bold" font-size="14">橙線</text>
+                            </g>
+
+                            <g id="l4-feedback-mark"></g>
+                        </svg>
+                    </div>
+                `;
+            }
+        }
+
+        function handleL4Click(isCorrect) {
+            const c = l4Cases[l4Step];
+            const markGroup = document.getElementById('l4-feedback-mark');
+
+            if (isCorrect) {
+                AudioSys.playCorrect();
+                if (c.type === 'fake-diameter') {
+                    markGroup.innerHTML = `
+                        <line x1="200" y1="105" x2="200" y2="165" stroke="#facc15" stroke-width="3" stroke-dasharray="4 4" />
+                        <rect x="210" y="122" width="125" height="26" rx="6" fill="#facc15" />
+                        <text x="272" y="140" text-anchor="middle" fill="#0f172a" font-weight="900" font-size="12">沒經過圓心！✗</text>
+                    `;
+                } else {
+                    markGroup.innerHTML = `
+                        <circle cx="255" cy="242" r="18" fill="none" stroke="#facc15" stroke-width="3" class="animate-ring" />
+                        <rect x="235" y="200" width="125" height="26" rx="6" fill="#facc15" />
+                        <text x="297" y="218" text-anchor="middle" fill="#0f172a" font-weight="900" font-size="12">沒碰到圓周！✗</text>
+                    `;
+                }
+
+                setAIMessage(c.rightFeedback, 'success');
+
+                setTimeout(() => {
+                    l4Step++;
+                    if (l4Step < l4Cases.length) {
+                        renderL4Case();
+                    } else {
+                        document.getElementById('sub-progress').textContent = '全數破案！';
+                        setAIMessage('恭喜你通過所有偵探考驗！你已經獲得「<span class="text-amber-300 font-black">榮譽圓形大偵探</span>」徽章，快進入第5關藝術工坊創作吧！', 'success');
+                        completeCurrentLevel();
+                    }
+                }, 2200);
+            } else {
+                AudioSys.playWrong();
+                setAIMessage(`⚠️ ${c.wrongFeedback}`, 'error');
+            }
+        }
+
+        // ==================== 第 5 關：AI「圓」美藝術工坊（過關獎勵與創意創作） ====================
+        let selectedColor = '#38bdf8';
+        let selectedRadius = 36;
+        let artCircles = [];
+
+        function renderLevel5() {
+            document.getElementById('stage-badge').textContent = '第 5 關：AI「圓」美藝術工坊';
+            document.getElementById('sub-progress').textContent = '榮譽徽章已解鎖 🏆';
+            document.getElementById('hint-text').textContent = '提示：點擊畫布蓋上相同大小的圓形印章，或試試 AI 一鍵生成對稱幾何圖案！';
+            setAIMessage('🎉 恭喜成為<span class="text-amber-300 font-black">榮譽圓形大偵探</span>！用大小相同的圓形設計你專屬的「圓」美幾何藝術吧！', 'success');
+
+            const stage = document.getElementById('game-stage');
+            stage.innerHTML = `
+                <div class="w-full flex flex-col lg:flex-row items-center justify-between gap-4">
+                    
+                    <!-- 左側：控制工具欄與榮譽徽章 -->
+                    <div class="w-full lg:w-64 flex flex-col gap-3 bg-slate-950/70 border border-slate-700/80 p-3.5 rounded-2xl">
+                        <!-- 榮譽徽章展示 -->
+                        <div class="flex items-center gap-3 bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border border-amber-400/50 p-2.5 rounded-xl">
+                            <div class="text-3xl">🏅</div>
+                            <div>
+                                <div class="text-xs text-amber-300 font-bold">破案認證</div>
+                                <div class="text-sm font-black text-white">榮譽圓形大偵探</div>
+                            </div>
+                        </div>
+
+                        <!-- 顏色選擇 -->
+                        <div>
+                            <div class="text-xs font-bold text-slate-300 mb-1.5">1. 選擇圓形顏色：</div>
+                            <div class="flex items-center justify-between gap-1.5">
+                                ${['#38bdf8', '#34d399', '#facc15', '#f472b6', '#c084fc', '#fb923c'].map(col => `
+                                    <button onclick="selectArtColor('${col}', this)" class="art-col-btn w-8 h-8 rounded-full border-2 ${col === selectedColor ? 'border-white scale-110' : 'border-transparent'} transition-transform" style="background-color: ${col};"></button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- 大小選擇 -->
+                        <div>
+                            <div class="text-xs font-bold text-slate-300 mb-1.5">2. 選擇圓形半徑大小：</div>
+                            <div class="grid grid-cols-3 gap-1.5">
+                                <button onclick="selectArtSize(24, this)" class="art-size-btn py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">小圓</button>
+                                <button onclick="selectArtSize(38, this)" class="art-size-btn py-1.5 rounded-lg text-xs font-bold bg-sky-500 text-slate-950 border border-sky-300">中圓</button>
+                                <button onclick="selectArtSize(52, this)" class="art-size-btn py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">大圓</button>
+                            </div>
+                        </div>
+
+                        <!-- AI 一鍵生成對稱圖案按鈕 -->
+                        <button onclick="generateAIPattern()" class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:opacity-95 text-white font-black text-sm shadow-lg shadow-purple-500/30 flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
+                            <span>✨</span>
+                            <span>AI 一鍵生成對稱圖案</span>
+                        </button>
+
+                        <!-- 清除與下載按鈕 -->
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <button onclick="clearArtCanvas()" class="py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs border border-slate-600">
+                                🗑️ 清空畫布
+                            </button>
+                            <button onclick="downloadArtCanvas()" class="py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow">
+                                💾 保存作品
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 右側：圓形萬花筒互動畫布 -->
+                    <div class="flex-1 w-full flex flex-col items-center">
+                        <div class="relative w-full max-w-[440px] aspect-square rounded-2xl overflow-hidden border-2 border-sky-400/50 bg-slate-950 shadow-inner">
+                            <canvas id="art-canvas" width="500" height="500" class="w-full h-full cursor-crosshair touch-none"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+            `;
+
+            initArtCanvas();
+            // 預設生成一個精美的六瓣花對稱圖案作為示範
+            if (artCircles.length === 0) {
+                generateAIPattern(0);
+            } else {
+                redrawArtCanvas();
+            }
+        }
+
+        function selectArtColor(col, btn) {
+            AudioSys.playPop();
+            selectedColor = col;
+            document.querySelectorAll('.art-col-btn').forEach(b => {
+                b.classList.remove('border-white', 'scale-110');
+                b.classList.add('border-transparent');
+            });
+            btn.classList.remove('border-transparent');
+            btn.classList.add('border-white', 'scale-110');
+        }
+
+        function selectArtSize(r, btn) {
+            AudioSys.playPop();
+            selectedRadius = r;
+            document.querySelectorAll('.art-size-btn').forEach(b => {
+                b.className = 'art-size-btn py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700';
+            });
+            btn.className = 'art-size-btn py-1.5 rounded-lg text-xs font-bold bg-sky-500 text-slate-950 border border-sky-300';
+        }
+
+        function initArtCanvas() {
+            const canvas = document.getElementById('art-canvas');
+            function addStamp(clientX, clientY) {
+                const rect = canvas.getBoundingClientRect();
+                const x = (clientX - rect.left) * (canvas.width / rect.width);
+                const y = (clientY - rect.top) * (canvas.height / rect.height);
+                artCircles.push({ x, y, r: selectedRadius, color: selectedColor });
+                AudioSys.playPop();
+                redrawArtCanvas();
+            }
+
+            canvas.addEventListener('mousedown', (e) => addStamp(e.clientX, e.clientY));
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (e.touches.length > 0) addStamp(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: false });
+        }
+
+        let aiPresetIndex = 0;
+        function generateAIPattern(forceIdx = null) {
+            AudioSys.playCorrect();
+            artCircles = [];
+            const cx = 250, cy = 250;
+            const mode = forceIdx !== null ? forceIdx : (aiPresetIndex % 3);
+            aiPresetIndex++;
+
+            if (mode === 0) {
+                // 模式1：經典六瓣生命之花（大小完全相同的圓組成）
+                const r = 68;
+                artCircles.push({ x: cx, y: cy, r, color: '#facc15' });
+                const colors = ['#38bdf8', '#34d399', '#f472b6', '#c084fc', '#fb923c', '#38bdf8'];
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i * 60) * Math.PI / 180;
+                    artCircles.push({
+                        x: cx + r * Math.cos(angle),
+                        y: cy + r * Math.sin(angle),
+                        r: r,
+                        color: colors[i]
+                    });
+                }
+                setAIMessage('✨ AI 生成了「六瓣幾何之花」！每個圓形的半徑都完全相等，圓周彼此穿過圓心，展現數學對稱之美！', 'success');
+            } else if (mode === 1) {
+                // 模式2：奧運/萬花筒雙環對稱圓
+                const r = 52;
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i * 45) * Math.PI / 180;
+                    artCircles.push({
+                        x: cx + 85 * Math.cos(angle),
+                        y: cy + 85 * Math.sin(angle),
+                        r: r,
+                        color: i % 2 === 0 ? '#38bdf8' : '#34d399'
+                    });
+                }
+                artCircles.push({ x: cx, y: cy, r: r, color: '#facc15' });
+                setAIMessage('✨ AI 生成了「八方星環」！你也可以繼續點擊畫布，在周圍蓋上更多相同大小的圓形印章！', 'success');
+            } else {
+                // 模式3：同心圓與等邊三角陣列（呼應課後挑戰題！）
+                const r = 60;
+                const dist = r * 2; // 互不重疊相切
+                const angles = [-90, 30, 150];
+                const cols = ['#f472b6', '#38bdf8', '#34d399'];
+                angles.forEach((deg, idx) => {
+                    const rad = deg * Math.PI / 180;
+                    artCircles.push({
+                        x: cx + (dist / Math.sqrt(3)) * Math.cos(rad),
+                        y: cy + (dist / Math.sqrt(3)) * Math.sin(rad) + 15,
+                        r: r,
+                        color: cols[idx]
+                    });
+                });
+                setAIMessage('✨ 彩蛋提示！看看這三個大小相同、互不重疊的圓形——將它們的「圓心」連起來，中間就出現一個三角形囉！', 'success');
+            }
+            redrawArtCanvas();
+        }
+
+        function clearArtCanvas() {
+            AudioSys.playPop();
+            artCircles = [];
+            redrawArtCanvas();
+        }
+
+        function redrawArtCanvas() {
+            const canvas = document.getElementById('art-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 背景微暗網格
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 繪製所有圓形（半透明疊加展現幾何交集美感）
+            artCircles.forEach(c => {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+                ctx.fillStyle = c.color + '26'; // 15% 透明度填充
+                ctx.fill();
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = c.color;
+                ctx.stroke();
+
+                // 畫出微小圓心點
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 右下角浮水印
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.font = 'bold 14px "Noto Sans TC", sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('榮譽圓形大偵探 • AI「圓」美作品', 482, 482);
+        }
+
+        function downloadArtCanvas() {
+            AudioSys.playCorrect();
+            const canvas = document.getElementById('art-canvas');
+            const link = document.createElement('a');
+            link.download = '我的圓美幾何藝術_圓形大偵探.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            setAIMessage('💾 作品已成功下載！快與同學或老師分享你的「圓」美幾何藝術吧！', 'success');
+        }
+
+        // 啟動遊戲（預設載入第1關）
+        window.onload = () => {
+            loadLevel(1);
+        };
+    </script>
+</body>
+</html>
